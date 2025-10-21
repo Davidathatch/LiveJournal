@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.recorder.RecorderVM.Companion.Factory
 import com.example.recorder.ui.theme.RecorderTheme
+import kotlinx.coroutines.launch
 import kotlin.getValue
 
 class MainActivity : ComponentActivity() {
@@ -40,6 +44,22 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        val recordings by vm.recordings.collectAsState()
+                        LazyColumn {
+                            items(recordings, key = { it.id }) { recording ->
+                                Card(
+                                    onClick = { vm.onRecordingDelete(recording) }
+                                ) {
+                                    Column {
+                                        Text(recording.name)
+                                        Text(recording.timestamp.toString())
+                                        Text(recording.fileName)
+                                        Text(recording.state.value)
+                                    }
+                                }
+                            }
+                        }
+
                         when {
                             applicationContext.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> {
                                 Button(
@@ -53,7 +73,10 @@ class MainActivity : ComponentActivity() {
                             else -> {
                                 Button(
                                     onClick = {
-                                        requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 1)
+                                        requestPermissions(
+                                            arrayOf(Manifest.permission.RECORD_AUDIO),
+                                            1
+                                        )
                                     }
                                 ) {
                                     Text("Give mic access")

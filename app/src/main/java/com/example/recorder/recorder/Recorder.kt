@@ -8,11 +8,19 @@ import android.util.Log
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.time.measureTime
 
+/**
+ * Used to record audio from the device mic
+ */
 class Recorder {
+    /**
+     * True if a recording is in progress
+     */
     private val recording = AtomicBoolean(false)
 
+    /**
+     * @return flow that emits byte arrays read from an audio recorder
+     */
     @SuppressLint("MissingPermission")
     fun start(onStop: () -> Unit = {}): Flow<ShortArray> = flow {
         Log.d("Recorder", "Starting recorder...")
@@ -58,6 +66,9 @@ class Recorder {
         onStop()
     }
 
+    /**
+     * Stops an ongoing recording
+     */
     fun stop() {
         recording.set(false)
     }
