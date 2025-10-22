@@ -7,30 +7,34 @@ import android.media.MediaRecorder
 import android.util.Log
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Used to record audio from the device mic
  */
 class Recorder {
     /**
-     * True if a recording is in progress
+     * Current state of the recorder
      */
-    private val recording = AtomicBoolean(false)
+    private val state = AtomicReference(RecorderState.READY)
+
+    fun state(): RecorderState {
+        return state.get()
+    }
 
     /**
      * @return flow that emits byte arrays read from an audio recorder
      */
     @SuppressLint("MissingPermission")
-    fun start(onStop: () -> Unit = {}): Flow<ShortArray> = flow {
-        Log.d("Recorder", "Starting recorder...")
-        recording.set(true)
+    fun start(): Flow<ShortArray> = flow {
+        state.set(RecorderState.RECORDING)
         try {
             val bufferSize = AudioRecord.getMinBufferSize(
                 RECORDER_SAMPLE_RATE,
                 RECORDER_CHANNEL_CONFIG,
                 RECORDER_AUDIO_ENCODING
             )
+
             val audioRecord = AudioRecord(
                 RECORDER_AUDIO_SOURCE,
                 RECORDER_SAMPLE_RATE,
@@ -41,36 +45,63 @@ class Recorder {
 
             try {
                 audioRecord.startRecording()
+                var isRecording = true
 
-                while (recording.get()) {
-                    val buffer = ShortArray(bufferSize * 2)
-                    val readAmount = audioRecord.read(buffer, 0, buffer.size)
-                    if (readAmount > 0) {
-                        emit(buffer)
-                    } else {
-                        throw RuntimeException("Audio recorder returned error code $readAmount")
+                while (state.get() != RecorderState.STOPPED && state.get() != RecorderState.ERROR) {
+                    if (state.get() == RecorderState.RECORDING) {
+                        if (!isRecording) {
+                            audioRecord.startRecording()
+                            isRecording = true
+                        }
+                        val buffer = ShortArray(bufferSize * 2)
+                        val readAmount = audioRecord.read(buffer, 0, buffer.size)
+                        if (readAmount > 0) {
+                            emit(buffer)
+                        } else {
+                            throw RuntimeException("Audio recorder returned error code $readAmount")
+                        }
+                    } else if (state.get() == RecorderState.PAUSED) {
+                        if (isRecording) {
+                            audioRecord.stop()
+                            isRecording = false
+                        }
                     }
                 }
+
+                audioRecord.stop()
+                audioRecord.release()
             } catch (e: Exception) {
                 Log.e("Recorder", "Error while reading recorded data", e)
-                recording.set(false)
-                onStop()
+                state.set(RecorderState.ERROR)
             }
 
         } catch (e: Exception) {
             Log.e("Recorder", "Error initializing recorder", e)
-            recording.set(false)
-            onStop()
+            state.set(RecorderState.ERROR)
         }
-
-        onStop()
     }
 
     /**
      * Stops an ongoing recording
      */
     fun stop() {
-        recording.set(false)
+        state.set(RecorderState.STOPPED)
+    }
+
+    /**
+     * Pauses an ongoing recording
+     */
+    fun pause() {
+        if (state.get() == RecorderState.RECORDING)
+            state.set(RecorderState.PAUSED)
+    }
+
+    /**
+     * Resumes a paused recording
+     */
+    fun resume() {
+        if (state.get() == RecorderState.PAUSED)
+            state.set(RecorderState.RECORDING)
     }
 
     companion object {
@@ -86,4 +117,13 @@ class Recorder {
             RECORDER_AUDIO_ENCODING
         )
     }
+
+}
+
+enum class RecorderState {
+    READY,
+    STOPPED,
+    PAUSED,
+    RECORDING,
+    ERROR
 }

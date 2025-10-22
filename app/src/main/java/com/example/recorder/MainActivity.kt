@@ -24,7 +24,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.recorder.RecorderVM.Companion.Factory
+import androidx.navigation.compose.rememberNavController
+import com.example.recorder.composables.RecorderNav
+import com.example.recorder.composables.RecordingExplorer
+import com.example.recorder.state.RecorderVM
+import com.example.recorder.state.RecorderVM.Companion.Factory
 import com.example.recorder.ui.theme.RecorderTheme
 import kotlinx.coroutines.launch
 import kotlin.getValue
@@ -34,57 +38,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val vm: RecorderVM by viewModels { RecorderVM.Factory }
+            val vm: RecorderVM by viewModels { Factory }
+            val navController = rememberNavController()
             RecorderTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Column(
-                        modifier = Modifier
-                            .padding(innerPadding)
-                            .fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        val recordings by vm.recordings.collectAsState()
-                        LazyColumn {
-                            items(recordings, key = { it.id }) { recording ->
-                                Card(
-                                    onClick = { vm.onRecordingDelete(recording) }
-                                ) {
-                                    Column {
-                                        Text(recording.name)
-                                        Text(recording.timestamp.toString())
-                                        Text(recording.fileName)
-                                        Text(recording.state.value)
-                                    }
-                                }
-                            }
-                        }
-
-                        when {
-                            applicationContext.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> {
-                                Button(
-                                    onClick = { vm.toggleRecording() }
-                                ) {
-                                    val recording by vm.recording.collectAsState()
-                                    Text(if (recording) "Stop" else "Record")
-                                }
-                            }
-
-                            else -> {
-                                Button(
-                                    onClick = {
-                                        requestPermissions(
-                                            arrayOf(Manifest.permission.RECORD_AUDIO),
-                                            1
-                                        )
-                                    }
-                                ) {
-                                    Text("Give mic access")
-                                }
-                            }
-                        }
-                    }
-                }
+                RecorderNav(navController, vm)
             }
         }
     }

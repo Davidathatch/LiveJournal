@@ -1,5 +1,6 @@
 package com.example.recorder.recorder
 
+import android.util.Log
 import com.example.recorder.utils.WavHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -86,15 +87,9 @@ class RecordingWriter(private val file: File) {
         }
     }
 
-    /**
-     * Called after [Recorder.stop] is called. Closes file resources and writes the WAV header.
-     */
-    suspend fun finishSave() {
+    suspend fun updateHeader() {
         withContext(Dispatchers.IO) {
             writingSem.acquire()
-            os.close()
-            doneWriting.set(true)
-
             val wavHeader = WavHelper.BuildHeader(
                 contentSize,
                 Recorder.RECORDER_CHANNEL_COUNT.toShort(),
@@ -106,6 +101,19 @@ class RecordingWriter(private val file: File) {
                 it.write(wavHeader)
             }
             writingSem.release()
+        }
+    }
+
+    /**
+     * Called after [Recorder.stop] is called. Closes file resources and writes the WAV header.
+     */
+    suspend fun finishSave() {
+        withContext(Dispatchers.IO) {
+            writingSem.acquire()
+            os.close()
+            doneWriting.set(true)
+            writingSem.release()
+            updateHeader()
         }
     }
 }
