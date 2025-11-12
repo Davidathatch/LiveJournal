@@ -15,6 +15,9 @@ object RecordingExplorer
 @Serializable
 object NewRecording
 
+@Serializable
+object RecordingPlayback
+
 @Composable
 fun RecorderNav(
     navController: NavHostController,
@@ -33,12 +36,21 @@ fun RecorderNav(
             vm.recordingExplorerState.setOnNewRecordingReq {
                 navController.navigate(NewRecording)
             }
+            vm.recordingExplorerState.setOnRecordingSelected {
+                vm.initializeRecordingPlaybackState(it)
+                navController.navigate(RecordingPlayback)
+            }
             RecordingExplorer(vm.recordingExplorerState)
         }
+
         composable<NewRecording> {
             val state = vm.newRecordingState
             state.setOnExitNewRecordingBtnPress { navController.popBackStack() }
             NewRecording(state)
+        }
+
+        composable<RecordingPlayback> {
+            RecordingPlayback(vm.recordingPlaybackState)
         }
     }
 }

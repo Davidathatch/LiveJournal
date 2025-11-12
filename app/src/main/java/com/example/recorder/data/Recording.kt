@@ -5,6 +5,7 @@ import android.media.MediaRecorder
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
+import com.example.recorder.recorder.Recorder
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -15,11 +16,11 @@ data class Recording(
     val fileName: String = "${UUID.randomUUID()}.wav",
     val timestamp: LocalDateTime = LocalDateTime.now(),
     val state: RecordingState = RecordingState.INCOMPLETE,
-    val channelCount: Int = 1,
-    val encoding: Int = AudioFormat.ENCODING_PCM_16BIT,
-    val bitsPerSample: Int = 16,
-    val audioSource: Int = MediaRecorder.AudioSource.MIC,
-    val sampleRate: Int = 44000
+    val channelCount: Int = Recorder.RECORDER_CHANNEL_COUNT,
+    val encoding: Int = Recorder.RECORDER_AUDIO_ENCODING,
+    val bitsPerSample: Int = Recorder.RECORDER_BITS_PER_SAMPLE,
+    val audioSource: Int = Recorder.RECORDER_AUDIO_SOURCE,
+    val sampleRate: Int = Recorder.RECORDER_SAMPLE_RATE
 )
 
 class Converters {

@@ -1,5 +1,6 @@
 package com.example.recorder.state
 
+import android.content.res.AssetManager
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -25,7 +26,8 @@ import java.io.File
 class RecorderVM(
     filesDir: File,
     private val recorderScope: CoroutineScope,
-    private val repo: RecordingRepository
+    private val repo: RecordingRepository,
+    private val assetManager: AssetManager
 ) : ViewModel() {
     /**
      * State for recording explorer composable
@@ -48,6 +50,8 @@ class RecorderVM(
         repo
     )
 
+    lateinit var recordingPlaybackState: RecordingPlaybackState
+
     /**
      * Current navigation route
      */
@@ -61,6 +65,15 @@ class RecorderVM(
         private set(value) {
             newRecordingStateMutable = value
         }
+
+    fun initializeRecordingPlaybackState(recording: Recording) {
+        recordingPlaybackState = RecordingPlaybackState(
+            recording,
+            assetManager,
+            repo,
+            viewModelScope
+        )
+    }
 
     /**
      * Resets the new recording state, disposing of any existing state data
@@ -107,7 +120,8 @@ class RecorderVM(
                 RecorderVM(
                     app.filesDir,
                     app.scope,
-                    app.repo
+                    app.repo,
+                    app.assets
                 )
             }
         }

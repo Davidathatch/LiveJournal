@@ -1,6 +1,5 @@
 package com.example.recorder.composables
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,11 +30,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.recorder.R
 import com.example.recorder.state.RecordingExplorerState
+import java.text.Format
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -75,7 +75,7 @@ fun RecordingExplorer(
                                 .fillMaxWidth()
                                 .padding(25.dp, 5.dp)
                                 .combinedClickable(
-                                    onClick = {},
+                                    onClick = { state.onRecordingCardPress(recording) },
                                     onLongClick = { dropdownExpanded = true },
                                 )
                         ) {
@@ -87,7 +87,7 @@ fun RecordingExplorer(
                             ) {
                                 Text(recording.name)
                                 Spacer(Modifier.width(15.dp))
-                                Text(recording.timestamp.format(java.time.format.DateTimeFormatter.ISO_DATE))
+                                Text(recording.timestamp.format(DateTimeFormatter.ofPattern("dd-MM-yyy HH:mm:ss")))
                             }
                             DropdownMenu(
                                 expanded = dropdownExpanded,

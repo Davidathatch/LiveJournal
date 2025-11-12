@@ -111,7 +111,7 @@ class Recorder {
         const val RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
         const val RECORDER_BITS_PER_SAMPLE = 16
         const val RECORDER_AUDIO_SOURCE = MediaRecorder.AudioSource.MIC
-        const val RECORDER_SAMPLE_RATE = 44000
+        const val RECORDER_SAMPLE_RATE = 16_000
         val RECORDER_BUFFER_SIZE = AudioRecord.getMinBufferSize(
             RECORDER_SAMPLE_RATE,
             RECORDER_CHANNEL_CONFIG,

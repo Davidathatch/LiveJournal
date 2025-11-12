@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,7 +50,8 @@ fun NewRecording(
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .navigationBarsPadding(),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -62,6 +64,7 @@ fun NewRecording(
             ButtonGroup(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(15.dp)
                     .weight(0.15f),
                 overflowIndicator = { menuState ->
                     ButtonGroupDefaults.OverflowIndicator(menuState = menuState)
@@ -87,34 +90,6 @@ fun NewRecording(
                     weight = 0.4f,
                     icon = { Icon(painterResource(R.drawable.stop), "Stop icon") })
             }
-//            FilledIconButton(
-//                onClick = {
-//                    state.toggleRecord()
-//                }
-//            ) {
-//                Icon(
-//                    when(recorderState) {
-//                        RecorderState.RECORDING -> painterResource(R.drawable.pause)
-//                        RecorderState.READY -> painterResource(R.drawable.record)
-//                        else -> painterResource(R.drawable.record)
-//                    },
-//                    when(recorderState) {
-//                        RecorderState.RECORDING -> "Pause icon"
-//                        RecorderState.READY -> "Record icon"
-//                        else -> "Record icon"
-//                    },
-//                )
-//            }
-//            FilledIconButton(
-//                onClick = {
-//                    state.exitNewRecording()
-//                }
-//            ) {
-//                Icon(
-//                    painterResource(R.drawable.stop),
-//                    "Stop icon"
-//                )
-//            }
         }
     }
 }

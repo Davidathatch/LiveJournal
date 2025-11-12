@@ -114,4 +114,8 @@ class RecordingRepository(
         val recordingFile = RecordingFile(toSave)
         return RecordingWriter(recordingFile)
     }
+
+    fun getRecordingFile(recording: Recording): File {
+        return File(filesDir.resolve("audio"), recording.fileName)
+    }
 }
