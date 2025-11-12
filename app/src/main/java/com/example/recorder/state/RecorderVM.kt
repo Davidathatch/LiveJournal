@@ -1,11 +1,13 @@
 package com.example.recorder.state
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.recorder.RecorderApplication
+import com.example.recorder.composables.NewRecording
 import com.example.recorder.data.Recording
 import com.example.recorder.data.RecordingRepository
 import kotlinx.coroutines.CoroutineScope
@@ -38,13 +40,55 @@ class RecorderVM(
     )
 
     /**
-     * State for the new recording composable
+     * State for new recording screen
      */
-    val newRecordingState get() = NewRecordingState(
+    private var newRecordingStateMutable = NewRecordingState(
         viewModelScope,
         recorderScope,
         repo
     )
+
+    /**
+     * Current navigation route
+     */
+    private var currentRoute = ""
+
+    /**
+     * State for the new recording composable
+     */
+    var newRecordingState
+        get() = newRecordingStateMutable
+        private set(value) {
+            newRecordingStateMutable = value
+        }
+
+    /**
+     * Resets the new recording state, disposing of any existing state data
+     */
+    fun resetNewRecordingState() {
+        newRecordingState = NewRecordingState(
+            viewModelScope,
+            recorderScope,
+            repo
+        )
+    }
+
+    /**
+     * Handles navigation to a difference screen by the user
+     *
+     * @param route: route of the current screen
+     */
+    fun onNavigationChange(route: String) {
+        if (currentRoute == NewRecording.javaClass.canonicalName && route != NewRecording.javaClass.canonicalName) {
+            newRecordingState.close()
+            resetNewRecordingState()
+        }
+        if (currentRoute != NewRecording.javaClass.canonicalName && route == NewRecording.javaClass.canonicalName) {
+            resetNewRecordingState()
+            newRecordingState.initialize()
+        }
+        currentRoute = route
+    }
 
     /**
      * Called when user request that a recording be deleted

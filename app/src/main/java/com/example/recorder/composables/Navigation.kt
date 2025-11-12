@@ -1,6 +1,7 @@
 package com.example.recorder.composables
 
-import android.util.Log
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -17,15 +18,26 @@ object NewRecording
 @Composable
 fun RecorderNav(
     navController: NavHostController,
-    vm: RecorderVM) {
-    NavHost(navController = navController, startDestination = RecordingExplorer) {
+    vm: RecorderVM
+) {
+    NavHost(
+        navController = navController,
+        startDestination = RecordingExplorer
+    ) {
+        navController.addOnDestinationChangedListener { controller, destination, arguments ->
+            if (destination.route != null) {
+                vm.onNavigationChange(destination.route!!)
+            }
+        }
         composable<RecordingExplorer> {
-            vm.recordingExplorerState.setOnNewRecordingReq{ navController.navigate(NewRecording) }
+            vm.recordingExplorerState.setOnNewRecordingReq {
+                navController.navigate(NewRecording)
+            }
             RecordingExplorer(vm.recordingExplorerState)
         }
         composable<NewRecording> {
             val state = vm.newRecordingState
-            state.setOnExitNewRecordingBtnPress{ navController.popBackStack() }
+            state.setOnExitNewRecordingBtnPress { navController.popBackStack() }
             NewRecording(state)
         }
     }

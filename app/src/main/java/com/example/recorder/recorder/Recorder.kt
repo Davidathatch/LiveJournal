@@ -5,8 +5,12 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.update
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -16,18 +20,15 @@ class Recorder {
     /**
      * Current state of the recorder
      */
-    private val state = AtomicReference(RecorderState.READY)
-
-    fun state(): RecorderState {
-        return state.get()
-    }
+    private val stateMutable = MutableStateFlow(RecorderState.READY)
+    val state = stateMutable
 
     /**
      * @return flow that emits byte arrays read from an audio recorder
      */
     @SuppressLint("MissingPermission")
     fun start(): Flow<ShortArray> = flow {
-        state.set(RecorderState.RECORDING)
+        stateMutable.update { RecorderState.RECORDING }
         try {
             val bufferSize = AudioRecord.getMinBufferSize(
                 RECORDER_SAMPLE_RATE,
@@ -47,8 +48,8 @@ class Recorder {
                 audioRecord.startRecording()
                 var isRecording = true
 
-                while (state.get() != RecorderState.STOPPED && state.get() != RecorderState.ERROR) {
-                    if (state.get() == RecorderState.RECORDING) {
+                while (stateMutable.value != RecorderState.STOPPED && stateMutable.value != RecorderState.ERROR) {
+                    if (stateMutable.value == RecorderState.RECORDING) {
                         if (!isRecording) {
                             audioRecord.startRecording()
                             isRecording = true
@@ -60,7 +61,7 @@ class Recorder {
                         } else {
                             throw RuntimeException("Audio recorder returned error code $readAmount")
                         }
-                    } else if (state.get() == RecorderState.PAUSED) {
+                    } else if (stateMutable.value == RecorderState.PAUSED) {
                         if (isRecording) {
                             audioRecord.stop()
                             isRecording = false
@@ -72,36 +73,36 @@ class Recorder {
                 audioRecord.release()
             } catch (e: Exception) {
                 Log.e("Recorder", "Error while reading recorded data", e)
-                state.set(RecorderState.ERROR)
+                stateMutable.update { RecorderState.ERROR }
             }
 
         } catch (e: Exception) {
             Log.e("Recorder", "Error initializing recorder", e)
-            state.set(RecorderState.ERROR)
+            stateMutable.update { RecorderState.ERROR }
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     /**
      * Stops an ongoing recording
      */
     fun stop() {
-        state.set(RecorderState.STOPPED)
+        stateMutable.update { RecorderState.STOPPED }
     }
 
     /**
      * Pauses an ongoing recording
      */
     fun pause() {
-        if (state.get() == RecorderState.RECORDING)
-            state.set(RecorderState.PAUSED)
+        if (stateMutable.value == RecorderState.RECORDING)
+            stateMutable.update { RecorderState.PAUSED }
     }
 
     /**
      * Resumes a paused recording
      */
     fun resume() {
-        if (state.get() == RecorderState.PAUSED)
-            state.set(RecorderState.RECORDING)
+        if (stateMutable.value == RecorderState.PAUSED)
+            stateMutable.update { RecorderState.RECORDING }
     }
 
     companion object {

@@ -1,9 +1,12 @@
 package com.example.recorder.data
 
 import android.util.Log
+import androidx.compose.material3.carousel.rememberCarouselState
+import com.example.recorder.recorder.RecordingFile
 import com.example.recorder.recorder.RecordingWriter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.io.File
@@ -34,7 +37,7 @@ class RecordingRepository(
      * @return row ID of recording in database
      */
     fun addRecording(recording: Recording): Deferred<Long> {
-        return scope.async {
+        return scope.async(Dispatchers.IO) {
             recordingDAO.insert(recording)
         }
     }
@@ -46,7 +49,7 @@ class RecordingRepository(
      * to be updated
      */
     fun updateRecording(recording: Recording) {
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             recordingDAO.update(recording)
         }
     }
@@ -58,8 +61,23 @@ class RecordingRepository(
      * @param state: new state value
      */
     fun updateRecordingState(id: Long, state: RecordingState) {
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             recordingDAO.updateRecordingState(id, state)
+        }
+    }
+
+    fun deleteRecordingFromId(recording: Recording, id: Long) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                File(recordingsDir, recording.fileName).delete()
+            } catch (e: Exception) {
+                Log.e(
+                    "Delete Recording",
+                    "Failed to delete recording file ${recording.fileName}",
+                    e
+                )
+            }
+            recordingDAO.deleteRecordingFromId(id)
         }
     }
 
@@ -69,7 +87,7 @@ class RecordingRepository(
      * @param recording: the recording to delete
      */
     fun deleteRecording(recording: Recording) {
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             try {
                 File(recordingsDir, recording.fileName).delete()
             } catch (e: Exception) {
@@ -93,6 +111,7 @@ class RecordingRepository(
         filesDir.resolve("audio").mkdir()
         val toSave = File(filesDir.resolve("audio"), recording.fileName)
         toSave.createNewFile()
-        return RecordingWriter(toSave)
+        val recordingFile = RecordingFile(toSave)
+        return RecordingWriter(recordingFile)
     }
 }

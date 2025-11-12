@@ -21,6 +21,9 @@ interface RecordingDAO {
     @Query("UPDATE Recording SET state = :state WHERE id = :id")
     fun updateRecordingState(id: Long, state: RecordingState)
 
+    @Query("DELETE FROM Recording WHERE id = :id")
+    fun deleteRecordingFromId(id: Long)
+
     @Delete
     fun delete(recording: Recording)
 }

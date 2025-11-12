@@ -7,10 +7,17 @@ import com.example.recorder.data.RecordingState
 import com.example.recorder.recorder.Recorder
 import com.example.recorder.recorder.RecorderState
 import com.example.recorder.recorder.RecordingWriter
+import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 class NewRecordingState(
     private val stateScope: CoroutineScope,
@@ -33,40 +40,107 @@ class NewRecordingState(
      */
     private var recordingRowId: Long? = null
 
-    private val recorderStateMutable = MutableStateFlow(recorder.state())
-    val recorderState = recorderStateMutable
+    /**
+     * Recording database entry currently being modified
+     */
+    private val newRecording = Recording(name = "Recording")
 
+    /**
+     * Current state of the recorder
+     */
+    val recorderState = recorder.state
+
+    private val initializedMutable = MutableStateFlow(InitializationState.NOT_INITIALIZED)
+
+    /**
+     * Tracks the status of this state object's initialization. Some initializations are run
+     * when the state object is created my [RecorderVM], so [initialized] enables these resources
+     * to be tracked and cleaned up when necessary.
+     */
+    val initialized = initializedMutable
+
+    /**
+     * Updates the callback that is invoked when the stop recording button is pressed.
+     *
+     * @param callback: function to be called by stop button
+     */
     fun setOnExitNewRecordingBtnPress(callback: () -> Unit) {
         onExitNewRecordingBtnPress = callback
     }
 
-    fun exitNewRecording() {
-        stateScope.launch {
-            if (recorder.state() != RecorderState.READY) {
+    /**
+     * Eagerly initializes a recording file and adds an entry to the database. This
+     * data is deleted if the user leaves the new recording screen without recording
+     * any audio.
+     */
+    fun initialize() {
+        if (initializedMutable.compareAndSet(
+                InitializationState.NOT_INITIALIZED,
+                InitializationState.INITIALIZING
+            )
+        ) {
+            stateScope.launch(Dispatchers.IO) {
+                writer = repo.prepareForRecording(newRecording)
+                recordingRowId = repo.addRecording(newRecording).await()
+                initializedMutable.update { InitializationState.INITIALIZED }
+            }
+        }
+    }
+
+    /**
+     * Releases any resources used by this state object.
+     */
+    fun close() {
+        stateScope.launch(Dispatchers.IO) {
+            if (recorderState.value != RecorderState.READY) {
                 recorder.stop()
-                writer.finishSave()
+                writer.close()
                 if (recordingRowId != null) {
                     repo.updateRecordingState(recordingRowId!!, RecordingState.COMPLETE)
                 }
+            } else {
+                if (!initializedMutable.compareAndSet(
+                        InitializationState.NOT_INITIALIZED,
+                        InitializationState.CLOSING
+                    )
+                ) {
+                    while (!initializedMutable.compareAndSet(
+                            InitializationState.INITIALIZED,
+                            InitializationState.CLOSING
+                        )
+                    ) {
+                    }
+                    writer.close()
+                    if (recordingRowId != null) {
+                        repo.deleteRecordingFromId(newRecording, recordingRowId!!)
+                    }
+                }
             }
+        }
+    }
+
+
+    /**
+     * Incoked when the stop button is pressed
+     */
+    fun onStopBtnPressed() {
+        stateScope.launch {
+            close()
             onExitNewRecordingBtnPress()
         }
     }
 
+    /**
+     * Toggles the recording between recording and paused states.
+     */
     fun toggleRecord() {
-        stateScope.launch {
-            when (recorder.state()) {
+        stateScope.launch(Dispatchers.IO) {
+            when (recorderState.value) {
                 RecorderState.READY -> {
-                    val newRecording = Recording(
-                        name = "Recording",
-                    )
                     try {
-                        writer = repo.prepareForRecording(newRecording)
-
-                        recorderScope.launch {
+                        stateScope.launch {
                             writer.beginSave(recorder.start())
                         }
-                        recordingRowId = repo.addRecording(newRecording).await()
                     } catch (e: Exception) {
                         Log.e("Recorder Vm", "Error starting recorder", e)
                     }
@@ -87,7 +161,31 @@ class NewRecordingState(
 
                 else -> {}
             }
-            recorderStateMutable.update { recorder.state() }
         }
     }
+}
+
+/**
+ * States of initialization for a [NewRecordingState] object
+ */
+enum class InitializationState {
+    /**
+     * Resources have not been initialized, nor has the initialization process started
+     */
+    NOT_INITIALIZED,
+
+    /**
+     * Resources are in the process of being initialized
+     */
+    INITIALIZING,
+
+    /**
+     * Resources have been initialized
+     */
+    INITIALIZED,
+
+    /**
+     * Resources are in the process of being released
+     */
+    CLOSING
 }

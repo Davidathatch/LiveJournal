@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -40,8 +41,27 @@ class MainActivity : ComponentActivity() {
         setContent {
             val vm: RecorderVM by viewModels { Factory }
             val navController = rememberNavController()
+            val launcher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { }
             RecorderTheme {
-                RecorderNav(navController, vm)
+                if (applicationContext.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                    RecorderNav(navController, vm)
+                } else {
+                    Column(
+                        Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Button(
+                            onClick = {
+                                launcher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        ) {
+                            Text("Give mic access")
+                        }
+                    }
+                }
             }
         }
     }
